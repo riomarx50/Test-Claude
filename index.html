@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>할일 목록</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>할일 목록</h1>
+
+    <div class="input-row">
+      <input
+        type="text"
+        id="todo-input"
+        placeholder="새 할일을 입력하세요..."
+        autocomplete="off"
+      />
+      <button id="add-btn">추가</button>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">전체</button>
+      <button class="filter-btn" data-filter="active">미완료</button>
+      <button class="filter-btn" data-filter="completed">완료</button>
+    </div>
+
+    <ul id="todo-list"></ul>
+
+    <div class="footer">
+      <span id="count"></span>
+      <button id="clear-btn">완료 항목 삭제</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
