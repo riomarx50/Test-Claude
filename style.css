@@ -69,6 +69,53 @@ h1 {
   background: #4338ca;
 }
 
+/* Datetime */
+.datetime-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.datetime-row label {
+  font-size: 0.85rem;
+  color: #666;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#todo-datetime {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid #dde1e7;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  color: #333;
+  transition: border-color 0.2s;
+}
+
+#todo-datetime:focus {
+  border-color: #4f46e5;
+}
+
+#clear-datetime-btn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #bbb;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+
+#clear-datetime-btn:hover {
+  color: #e53e3e;
+  background: #fff0f0;
+}
+
 /* Filters */
 .filters {
   display: flex;
@@ -130,8 +177,15 @@ h1 {
   flex-shrink: 0;
 }
 
-.todo-item .todo-text {
+.todo-body {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.todo-item .todo-text {
   font-size: 0.95rem;
   color: #222;
   word-break: break-word;
@@ -140,6 +194,21 @@ h1 {
 .todo-item.completed .todo-text {
   text-decoration: line-through;
   color: #aaa;
+}
+
+.todo-due {
+  font-size: 0.78rem;
+  color: #999;
+}
+
+.todo-due--over {
+  color: #e53e3e;
+  font-weight: 600;
+}
+
+.todo-item.overdue {
+  border-color: #fca5a5;
+  background: #fff8f8;
 }
 
 .delete-btn {

@@ -14,12 +14,24 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
 }
 
-function addTodo(text) {
+function addTodo(text, dueDate) {
   const trimmed = text.trim();
   if (!trimmed) return;
-  todos.push({ id: Date.now(), text: trimmed, completed: false });
+  todos.push({ id: Date.now(), text: trimmed, completed: false, dueDate: dueDate || null });
   save();
   render();
+}
+
+function formatDue(dueDate) {
+  if (!dueDate) return null;
+  const d = new Date(dueDate);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function isOverdue(todo) {
+  if (!todo.dueDate || todo.completed) return false;
+  return new Date(todo.dueDate) < new Date();
 }
 
 function toggleTodo(id) {
@@ -56,13 +68,20 @@ function render() {
   if (visible.length === 0) {
     list.innerHTML = '<li class="empty-msg">할일이 없습니다.</li>';
   } else {
-    list.innerHTML = visible.map(todo => `
-      <li class="todo-item${todo.completed ? ' completed' : ''}" data-id="${todo.id}">
-        <input type="checkbox" ${todo.completed ? 'checked' : ''} />
-        <span class="todo-text">${escapeHtml(todo.text)}</span>
-        <button class="delete-btn" title="삭제">✕</button>
-      </li>
-    `).join('');
+    list.innerHTML = visible.map(todo => {
+      const due = formatDue(todo.dueDate);
+      const overdue = isOverdue(todo);
+      return `
+        <li class="todo-item${todo.completed ? ' completed' : ''}${overdue ? ' overdue' : ''}" data-id="${todo.id}">
+          <input type="checkbox" ${todo.completed ? 'checked' : ''} />
+          <div class="todo-body">
+            <span class="todo-text">${escapeHtml(todo.text)}</span>
+            ${due ? `<span class="todo-due${overdue ? ' todo-due--over' : ''}">${overdue ? '⚠ 마감 초과 · ' : ''}${due}</span>` : ''}
+          </div>
+          <button class="delete-btn" title="삭제">✕</button>
+        </li>
+      `;
+    }).join('');
   }
 
   const activeCount = todos.filter(t => !t.completed).length;
@@ -79,17 +98,26 @@ function escapeHtml(str) {
 
 // Event: add
 const input = document.getElementById('todo-input');
+const datetimeInput = document.getElementById('todo-datetime');
+
 document.getElementById('add-btn').addEventListener('click', () => {
-  addTodo(input.value);
+  addTodo(input.value, datetimeInput.value);
   input.value = '';
+  datetimeInput.value = '';
   input.focus();
 });
 
 input.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    addTodo(input.value);
+    addTodo(input.value, datetimeInput.value);
     input.value = '';
+    datetimeInput.value = '';
   }
+});
+
+document.getElementById('clear-datetime-btn').addEventListener('click', () => {
+  datetimeInput.value = '';
+  input.focus();
 });
 
 // Event: list (delegation)
