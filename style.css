@@ -20,7 +20,7 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 32px;
   width: 100%;
-  max-width: 480px;
+  max-width: 680px;
 }
 
 h1 {
@@ -35,7 +35,7 @@ h1 {
 .input-row {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 #todo-input {
@@ -75,27 +75,29 @@ h1 {
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .datetime-row label {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #666;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-#todo-datetime {
+.datetime-row input[type="datetime-local"] {
   flex: 1;
-  padding: 8px 12px;
+  min-width: 150px;
+  padding: 7px 10px;
   border: 1.5px solid #dde1e7;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   outline: none;
   color: #333;
   transition: border-color 0.2s;
 }
 
-#todo-datetime:focus {
+.datetime-row input[type="datetime-local"]:focus {
   border-color: #4f46e5;
 }
 
@@ -116,16 +118,22 @@ h1 {
   background: #fff0f0;
 }
 
-/* Filters */
-.filters {
+/* Toolbar */
+.toolbar {
   display: flex;
-  gap: 6px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
+.filters {
+  display: flex;
+  gap: 6px;
+}
+
 .filter-btn {
-  flex: 1;
-  padding: 7px 0;
+  padding: 7px 14px;
   background: #f0f2f5;
   border: none;
   border-radius: 6px;
@@ -145,13 +153,45 @@ h1 {
   font-weight: 600;
 }
 
-/* Todo list */
-#todo-list {
+/* View toggle */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: #f0f2f5;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.view-btn {
+  padding: 5px 14px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.view-btn.active {
+  background: #fff;
+  color: #4f46e5;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+/* List view */
+#list-view {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-height: 40px;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .todo-item {
@@ -234,6 +274,137 @@ h1 {
   color: #bbb;
   font-size: 0.9rem;
   padding: 24px 0;
+}
+
+/* ── Gantt view ────────────────────────────────────────── */
+#gantt-view {
+  overflow: hidden;
+}
+
+.gantt-scroll-wrap {
+  overflow-x: auto;
+  border: 1.5px solid #eee;
+  border-radius: 8px;
+}
+
+#gantt-inner {
+  display: table;
+  min-width: 100%;
+}
+
+.gantt-header-row,
+.gantt-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.gantt-row:last-child {
+  border-bottom: none;
+}
+
+.gantt-label {
+  width: 140px;
+  min-width: 140px;
+  flex-shrink: 0;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: #333;
+  background: #fafafa;
+  border-right: 1.5px solid #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.gantt-label--header {
+  background: #f5f6f8;
+  font-weight: 600;
+  color: #555;
+}
+
+/* Timeline track */
+.gantt-track {
+  position: relative;
+  height: 44px;
+  flex-shrink: 0;
+  background: #fafafa;
+}
+
+.gantt-header-row .gantt-track {
+  height: 32px;
+  background: #f5f6f8;
+}
+
+/* Grid lines */
+.gantt-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #eee;
+}
+
+/* Day ticks */
+.gantt-tick {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+/* Today marker */
+.gantt-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f59e0b;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+/* Bars */
+.gantt-bar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 24px;
+  background: #4f46e5;
+  border-radius: 4px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  cursor: default;
+  transition: filter 0.15s;
+}
+
+.gantt-bar:hover {
+  filter: brightness(1.1);
+}
+
+.gantt-bar--done {
+  background: #a3a3a3;
+}
+
+.gantt-bar--over {
+  background: #e53e3e;
+}
+
+.gantt-bar-label {
+  font-size: 0.72rem;
+  color: #fff;
+  padding: 0 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 /* Footer */

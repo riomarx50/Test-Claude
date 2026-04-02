@@ -20,18 +20,32 @@
       <button id="add-btn">추가</button>
     </div>
     <div class="datetime-row">
-      <label for="todo-datetime">마감일시</label>
+      <label for="todo-start">시작</label>
+      <input type="datetime-local" id="todo-start" />
+      <label for="todo-datetime">마감</label>
       <input type="datetime-local" id="todo-datetime" />
       <button id="clear-datetime-btn" title="날짜 지우기">✕</button>
     </div>
 
-    <div class="filters">
-      <button class="filter-btn active" data-filter="all">전체</button>
-      <button class="filter-btn" data-filter="active">미완료</button>
-      <button class="filter-btn" data-filter="completed">완료</button>
+    <div class="toolbar">
+      <div class="filters">
+        <button class="filter-btn active" data-filter="all">전체</button>
+        <button class="filter-btn" data-filter="active">미완료</button>
+        <button class="filter-btn" data-filter="completed">완료</button>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="list">목록</button>
+        <button class="view-btn" data-view="gantt">간트</button>
+      </div>
     </div>
 
-    <ul id="todo-list"></ul>
+    <ul id="list-view"></ul>
+
+    <div id="gantt-view" class="hidden">
+      <div class="gantt-scroll-wrap">
+        <div id="gantt-inner"></div>
+      </div>
+    </div>
 
     <div class="footer">
       <span id="count"></span>
