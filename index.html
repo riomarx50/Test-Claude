@@ -88,21 +88,56 @@
       </div>
 
       <div class="controls-panel">
-        <div class="beauty-panel">
-          <div class="beauty-item">
-            <label>스무딩</label>
-            <input type="range" id="edit-slider-smooth" class="beauty-slider" min="0" max="100" value="0" />
-            <span class="slider-value" id="edit-val-smooth">0</span>
+        <!-- 탭 바 -->
+        <div class="adj-tabs">
+          <button class="adj-tab active" data-tab="beauty">뷰티</button>
+          <button class="adj-tab" data-tab="body">체형</button>
+        </div>
+
+        <!-- 뷰티 탭 -->
+        <div class="adj-panel" id="tab-beauty">
+          <div class="beauty-panel">
+            <div class="beauty-item">
+              <label>스무딩</label>
+              <input type="range" id="edit-slider-smooth" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="edit-val-smooth">0</span>
+            </div>
+            <div class="beauty-item">
+              <label>밝기</label>
+              <input type="range" id="edit-slider-bright" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="edit-val-bright">0</span>
+            </div>
+            <div class="beauty-item">
+              <label>톤</label>
+              <input type="range" id="edit-slider-tone" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="edit-val-tone">0</span>
+            </div>
           </div>
-          <div class="beauty-item">
-            <label>밝기</label>
-            <input type="range" id="edit-slider-bright" class="beauty-slider" min="0" max="100" value="0" />
-            <span class="slider-value" id="edit-val-bright">0</span>
-          </div>
-          <div class="beauty-item">
-            <label>톤</label>
-            <input type="range" id="edit-slider-tone" class="beauty-slider" min="0" max="100" value="0" />
-            <span class="slider-value" id="edit-val-tone">0</span>
+        </div>
+
+        <!-- 체형 탭 -->
+        <div class="adj-panel hidden" id="tab-body">
+          <div class="beauty-panel">
+            <div class="beauty-item">
+              <label>얼굴슬림</label>
+              <input type="range" id="body-slider-faceslim" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="body-val-faceslim">0</span>
+            </div>
+            <div class="beauty-item">
+              <label>눈크게</label>
+              <input type="range" id="body-slider-eyeenlarge" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="body-val-eyeenlarge">0</span>
+            </div>
+            <div class="beauty-item">
+              <label>다리길게</label>
+              <input type="range" id="body-slider-leglength" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="body-val-leglength">0</span>
+            </div>
+            <div class="beauty-item">
+              <label>몸슬림</label>
+              <input type="range" id="body-slider-bodyslim" class="beauty-slider" min="0" max="100" value="0" />
+              <span class="slider-value" id="body-val-bodyslim">0</span>
+            </div>
           </div>
         </div>
 
