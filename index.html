@@ -2,55 +2,124 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>할일 목록</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>BeautyCam - 뷰티 카메라</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>할일 목록</h1>
+  <div id="app">
 
-    <div class="input-row">
-      <input
-        type="text"
-        id="todo-input"
-        placeholder="새 할일을 입력하세요..."
-        autocomplete="off"
-      />
-      <button id="add-btn">추가</button>
-    </div>
-    <div class="datetime-row">
-      <label for="todo-start">시작</label>
-      <input type="datetime-local" id="todo-start" />
-      <label for="todo-datetime">마감</label>
-      <input type="datetime-local" id="todo-datetime" />
-      <button id="clear-datetime-btn" title="날짜 지우기">✕</button>
-    </div>
+    <!-- ========== 카메라 모드 ========== -->
+    <div id="camera-mode" class="screen">
+      <header class="top-bar">
+        <button id="btn-import" class="icon-btn" title="사진 불러오기">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
+        <span class="app-title">BeautyCam</span>
+        <button id="btn-flip" class="icon-btn" title="카메라 전환">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </header>
 
-    <div class="toolbar">
-      <div class="filters">
-        <button class="filter-btn active" data-filter="all">전체</button>
-        <button class="filter-btn" data-filter="active">미완료</button>
-        <button class="filter-btn" data-filter="completed">완료</button>
+      <div class="viewfinder">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="live-canvas"></canvas>
+        <div id="camera-placeholder" class="camera-placeholder">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <p>카메라에 접근할 수 없습니다</p>
+          <button id="btn-import-fallback" class="btn-accent">사진 불러오기</button>
+        </div>
       </div>
-      <div class="view-toggle">
-        <button class="view-btn active" data-view="list">목록</button>
-        <button class="view-btn" data-view="gantt">간트</button>
+
+      <div class="controls-panel">
+        <div class="beauty-panel">
+          <div class="beauty-item">
+            <label>스무딩</label>
+            <input type="range" id="slider-smooth" class="beauty-slider" min="0" max="100" value="0" />
+            <span class="slider-value" id="val-smooth">0</span>
+          </div>
+          <div class="beauty-item">
+            <label>밝기</label>
+            <input type="range" id="slider-bright" class="beauty-slider" min="0" max="100" value="0" />
+            <span class="slider-value" id="val-bright">0</span>
+          </div>
+          <div class="beauty-item">
+            <label>톤</label>
+            <input type="range" id="slider-tone" class="beauty-slider" min="0" max="100" value="0" />
+            <span class="slider-value" id="val-tone">0</span>
+          </div>
+        </div>
+
+        <div class="filter-carousel" id="filter-carousel">
+          <button class="filter-chip active" data-filter="natural">자연</button>
+          <button class="filter-chip" data-filter="bright">밝음</button>
+          <button class="filter-chip" data-filter="soft">부드럽</button>
+          <button class="filter-chip" data-filter="vivid">선명</button>
+          <button class="filter-chip" data-filter="warm">따뜻</button>
+          <button class="filter-chip" data-filter="cool">차가운</button>
+          <button class="filter-chip" data-filter="matte">매트</button>
+          <button class="filter-chip" data-filter="bw">흑백</button>
+        </div>
+      </div>
+
+      <div class="capture-area">
+        <button id="btn-capture" class="capture-btn" title="촬영">
+          <span class="capture-ring"></span>
+        </button>
       </div>
     </div>
 
-    <ul id="list-view"></ul>
+    <!-- ========== 편집 모드 ========== -->
+    <div id="edit-mode" class="screen hidden">
+      <header class="top-bar">
+        <button id="btn-retake" class="icon-btn" title="다시찍기">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          <span class="btn-label">다시찍기</span>
+        </button>
+        <span class="app-title">편집</span>
+        <button id="btn-download" class="icon-btn accent" title="저장하기">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="btn-label">저장</span>
+        </button>
+      </header>
 
-    <div id="gantt-view" class="hidden">
-      <div class="gantt-scroll-wrap">
-        <div id="gantt-inner"></div>
+      <div class="edit-preview">
+        <canvas id="edit-canvas"></canvas>
+      </div>
+
+      <div class="controls-panel">
+        <div class="beauty-panel">
+          <div class="beauty-item">
+            <label>스무딩</label>
+            <input type="range" id="edit-slider-smooth" class="beauty-slider" min="0" max="100" value="0" />
+            <span class="slider-value" id="edit-val-smooth">0</span>
+          </div>
+          <div class="beauty-item">
+            <label>밝기</label>
+            <input type="range" id="edit-slider-bright" class="beauty-slider" min="0" max="100" value="0" />
+            <span class="slider-value" id="edit-val-bright">0</span>
+          </div>
+          <div class="beauty-item">
+            <label>톤</label>
+            <input type="range" id="edit-slider-tone" class="beauty-slider" min="0" max="100" value="0" />
+            <span class="slider-value" id="edit-val-tone">0</span>
+          </div>
+        </div>
+
+        <div class="filter-carousel" id="edit-filter-carousel">
+          <button class="filter-chip active" data-filter="natural">자연</button>
+          <button class="filter-chip" data-filter="bright">밝음</button>
+          <button class="filter-chip" data-filter="soft">부드럽</button>
+          <button class="filter-chip" data-filter="vivid">선명</button>
+          <button class="filter-chip" data-filter="warm">따뜻</button>
+          <button class="filter-chip" data-filter="cool">차가운</button>
+          <button class="filter-chip" data-filter="matte">매트</button>
+          <button class="filter-chip" data-filter="bw">흑백</button>
+        </div>
       </div>
     </div>
 
-    <div class="footer">
-      <span id="count"></span>
-      <button id="clear-btn">완료 항목 삭제</button>
-    </div>
+    <input type="file" id="file-input" accept="image/*" hidden />
   </div>
 
   <script src="app.js"></script>

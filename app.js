@@ -1,284 +1,307 @@
-const STORAGE_KEY = 'todos';
-let filter = 'all';
-let currentView = 'list';
-let todos = load();
+/* ========== BeautyCam - 뷰티 카메라 앱 ========== */
 
-function load() {
+// ── 필터 프리셋 ──────────────────────────────────────────
+const FILTERS = {
+  natural:  { label: '자연',   brightness: 1.0,  contrast: 1.0,  saturate: 1.0,  hueRotate: 0,    sepia: 0,    blur: 0   },
+  bright:   { label: '밝음',   brightness: 1.25, contrast: 0.95, saturate: 1.1,  hueRotate: 0,    sepia: 0,    blur: 0   },
+  soft:     { label: '부드럽', brightness: 1.1,  contrast: 0.85, saturate: 0.9,  hueRotate: 0,    sepia: 0.05, blur: 0.5 },
+  vivid:    { label: '선명',   brightness: 1.05, contrast: 1.15, saturate: 1.5,  hueRotate: 0,    sepia: 0,    blur: 0   },
+  warm:     { label: '따뜻',   brightness: 1.1,  contrast: 1.0,  saturate: 1.2,  hueRotate: -10,  sepia: 0.15, blur: 0   },
+  cool:     { label: '차가운', brightness: 0.95, contrast: 1.05, saturate: 0.85, hueRotate: 190,  sepia: 0,    blur: 0   },
+  matte:    { label: '매트',   brightness: 0.95, contrast: 0.85, saturate: 0.7,  hueRotate: 0,    sepia: 0.1,  blur: 0   },
+  bw:       { label: '흑백',   brightness: 1.0,  contrast: 1.1,  saturate: 0,    hueRotate: 0,    sepia: 0,    blur: 0   },
+};
+
+// ── 앱 상태 ─────────────────────────────────────────────
+let stream = null;
+let facingMode = 'user';
+let currentFilter = 'natural';
+let beauty = { smooth: 0, bright: 0, tone: 0 };
+let capturedImage = null;  // HTMLImageElement
+let mode = 'camera';       // 'camera' | 'edit'
+
+// ── DOM 참조 ────────────────────────────────────────────
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const videoEl       = $('#video');
+const liveCanvas    = $('#live-canvas');
+const placeholder   = $('#camera-placeholder');
+const cameraScreen  = $('#camera-mode');
+const editScreen    = $('#edit-mode');
+const editCanvas    = $('#edit-canvas');
+const fileInput     = $('#file-input');
+
+// ── 초기화 ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+
+function init() {
+  bindEvents();
+  startCamera();
+}
+
+function bindEvents() {
+  // 카메라 모드
+  $('#btn-import').addEventListener('click', () => fileInput.click());
+  $('#btn-import-fallback').addEventListener('click', () => fileInput.click());
+  $('#btn-flip').addEventListener('click', switchCamera);
+  $('#btn-capture').addEventListener('click', capture);
+  fileInput.addEventListener('change', handleFileImport);
+
+  // 편집 모드
+  $('#btn-retake').addEventListener('click', goBackToCamera);
+  $('#btn-download').addEventListener('click', download);
+
+  // 뷰티 슬라이더 (카메라 모드)
+  $('#slider-smooth').addEventListener('input', (e) => setBeauty('smooth', e.target.value));
+  $('#slider-bright').addEventListener('input', (e) => setBeauty('bright', e.target.value));
+  $('#slider-tone').addEventListener('input', (e) => setBeauty('tone', e.target.value));
+
+  // 뷰티 슬라이더 (편집 모드)
+  $('#edit-slider-smooth').addEventListener('input', (e) => setBeauty('smooth', e.target.value));
+  $('#edit-slider-bright').addEventListener('input', (e) => setBeauty('bright', e.target.value));
+  $('#edit-slider-tone').addEventListener('input', (e) => setBeauty('tone', e.target.value));
+
+  // 필터 캐러셀 (카메라 모드)
+  $$('#filter-carousel .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => setFilter(chip.dataset.filter, '#filter-carousel'));
+  });
+
+  // 필터 캐러셀 (편집 모드)
+  $$('#edit-filter-carousel .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => setFilter(chip.dataset.filter, '#edit-filter-carousel'));
+  });
+}
+
+// ── 카메라 ──────────────────────────────────────────────
+async function startCamera() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-}
-
-function addTodo(text, startDate, dueDate) {
-  const trimmed = text.trim();
-  if (!trimmed) return;
-  todos.push({
-    id: Date.now(),
-    text: trimmed,
-    completed: false,
-    startDate: startDate || null,
-    dueDate: dueDate || null,
-  });
-  save();
-  render();
-}
-
-function toggleTodo(id) {
-  const todo = todos.find(t => t.id === id);
-  if (todo) {
-    todo.completed = !todo.completed;
-    save();
-    render();
-  }
-}
-
-function deleteTodo(id) {
-  todos = todos.filter(t => t.id !== id);
-  save();
-  render();
-}
-
-function clearCompleted() {
-  todos = todos.filter(t => !t.completed);
-  save();
-  render();
-}
-
-function formatDue(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function isOverdue(todo) {
-  if (!todo.dueDate || todo.completed) return false;
-  return new Date(todo.dueDate) < new Date();
-}
-
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-// ── List view ─────────────────────────────────────────────
-function renderList() {
-  const list = document.getElementById('list-view');
-
-  const visible = todos.filter(t => {
-    if (filter === 'active') return !t.completed;
-    if (filter === 'completed') return t.completed;
-    return true;
-  });
-
-  if (visible.length === 0) {
-    list.innerHTML = '<li class="empty-msg">할일이 없습니다.</li>';
-    return;
-  }
-
-  list.innerHTML = visible.map(todo => {
-    const overdue = isOverdue(todo);
-    const startStr = formatDue(todo.startDate);
-    const dueStr = formatDue(todo.dueDate);
-    let dateLabel = '';
-    if (startStr && dueStr) {
-      dateLabel = `${startStr} ~ ${dueStr}`;
-    } else if (dueStr) {
-      dateLabel = `마감 ${dueStr}`;
-    } else if (startStr) {
-      dateLabel = `시작 ${startStr}`;
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
     }
-    return `
-      <li class="todo-item${todo.completed ? ' completed' : ''}${overdue ? ' overdue' : ''}" data-id="${todo.id}">
-        <input type="checkbox" ${todo.completed ? 'checked' : ''} />
-        <div class="todo-body">
-          <span class="todo-text">${escapeHtml(todo.text)}</span>
-          ${dateLabel ? `<span class="todo-due${overdue ? ' todo-due--over' : ''}">${overdue ? '⚠ 마감 초과 · ' : ''}${dateLabel}</span>` : ''}
-        </div>
-        <button class="delete-btn" title="삭제">✕</button>
-      </li>
-    `;
-  }).join('');
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+
+    videoEl.srcObject = stream;
+    videoEl.style.display = 'block';
+    placeholder.style.display = 'none';
+
+    applyLiveFilter();
+  } catch (err) {
+    console.warn('카메라 접근 실패:', err);
+    videoEl.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
 }
 
-// ── Gantt view ────────────────────────────────────────────
-function renderGantt() {
-  const ganttInner = document.getElementById('gantt-inner');
+async function switchCamera() {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
 
-  const withDates = todos.filter(t => t.startDate && t.dueDate);
+  // 미러링: 전면은 좌우반전, 후면은 정상
+  videoEl.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'none';
 
-  if (withDates.length === 0) {
-    ganttInner.innerHTML = '<div class="empty-msg" style="padding:32px 16px">시작일시와 마감일시가 모두 있는 항목이 없습니다.</div>';
-    return;
-  }
-
-  const minTime = Math.min(...withDates.map(t => new Date(t.startDate).getTime()));
-  const maxTime = Math.max(...withDates.map(t => new Date(t.dueDate).getTime()));
-
-  const startDay = new Date(minTime);
-  startDay.setHours(0, 0, 0, 0);
-  const endDay = new Date(maxTime);
-  endDay.setHours(23, 59, 59, 999);
-  const totalMs = endDay.getTime() - startDay.getTime();
-
-  // Build day ticks
-  const days = [];
-  const cur = new Date(startDay);
-  while (cur <= endDay) {
-    days.push(new Date(cur));
-    cur.setDate(cur.getDate() + 1);
-  }
-
-  const BAR_W = Math.max(days.length * 72, 480);
-  const pad = n => String(n).padStart(2, '0');
-
-  const ticks = days.map(day => {
-    const pct = ((day.getTime() - startDay.getTime()) / totalMs) * 100;
-    const label = `${day.getMonth()+1}/${day.getDate()}`;
-    return `<div class="gantt-tick" style="left:${pct}%">${label}</div>`;
-  }).join('');
-
-  // Today marker
-  const now = new Date();
-  let todayMarker = '';
-  if (now >= startDay && now <= endDay) {
-    const todayPct = ((now.getTime() - startDay.getTime()) / totalMs) * 100;
-    todayMarker = `<div class="gantt-today" style="left:${todayPct}%" title="오늘"></div>`;
-  }
-
-  // Grid lines
-  const gridLines = days.map(day => {
-    const pct = ((day.getTime() - startDay.getTime()) / totalMs) * 100;
-    return `<div class="gantt-grid-line" style="left:${pct}%"></div>`;
-  }).join('');
-
-  const rows = withDates.map(todo => {
-    const barLeft = ((new Date(todo.startDate).getTime() - startDay.getTime()) / totalMs) * 100;
-    const barWidth = ((new Date(todo.dueDate).getTime() - new Date(todo.startDate).getTime()) / totalMs) * 100;
-    const overdue = isOverdue(todo);
-
-    const cls = ['gantt-bar',
-      todo.completed ? 'gantt-bar--done' : '',
-      overdue ? 'gantt-bar--over' : ''
-    ].filter(Boolean).join(' ');
-
-    const startD = new Date(todo.startDate);
-    const endD = new Date(todo.dueDate);
-    const tooltip = `${escapeHtml(todo.text)}\n${pad(startD.getMonth()+1)}/${pad(startD.getDate())} ~ ${pad(endD.getMonth()+1)}/${pad(endD.getDate())}`;
-
-    return `
-      <div class="gantt-row">
-        <div class="gantt-label" title="${escapeHtml(todo.text)}">${escapeHtml(todo.text)}</div>
-        <div class="gantt-track" style="width:${BAR_W}px">
-          ${gridLines}
-          ${todayMarker}
-          <div class="${cls}"
-               style="left:${barLeft.toFixed(2)}%;width:${Math.max(barWidth, 1).toFixed(2)}%"
-               title="${tooltip}">
-            <span class="gantt-bar-label">${escapeHtml(todo.text)}</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  ganttInner.innerHTML = `
-    <div class="gantt-header-row">
-      <div class="gantt-label gantt-label--header"></div>
-      <div class="gantt-track gantt-date-header" style="width:${BAR_W}px">
-        ${ticks}
-      </div>
-    </div>
-    ${rows}
-  `;
+  await startCamera();
 }
 
-// ── Main render ───────────────────────────────────────────
-function render() {
-  const listView = document.getElementById('list-view');
-  const ganttView = document.getElementById('gantt-view');
-  const countEl = document.getElementById('count');
+// ── 실시간 필터 (CSS filter on video) ───────────────────
+function applyLiveFilter() {
+  videoEl.style.filter = getFilterString();
+}
 
-  if (currentView === 'gantt') {
-    listView.classList.add('hidden');
-    ganttView.classList.remove('hidden');
-    renderGantt();
+// ── 필터 문자열 생성 ────────────────────────────────────
+function getFilterString() {
+  const f = FILTERS[currentFilter];
+  const b = beauty;
+
+  const brightness = f.brightness + (b.bright / 100) * 0.4;
+  const contrast   = f.contrast;
+  const saturate   = f.saturate + (b.tone / 100) * 0.3;
+  const hueRotate  = f.hueRotate;
+  const sepia      = f.sepia + (b.tone / 100) * 0.25;
+  const blur       = f.blur + (b.smooth / 100) * 2.5;
+
+  let filterStr = `brightness(${brightness.toFixed(2)}) `;
+  filterStr += `contrast(${contrast.toFixed(2)}) `;
+  filterStr += `saturate(${saturate.toFixed(2)}) `;
+  if (hueRotate !== 0) filterStr += `hue-rotate(${hueRotate}deg) `;
+  if (sepia > 0) filterStr += `sepia(${sepia.toFixed(2)}) `;
+  if (blur > 0) filterStr += `blur(${blur.toFixed(1)}px) `;
+
+  return filterStr.trim();
+}
+
+// ── 필터 선택 ───────────────────────────────────────────
+function setFilter(name, carouselSelector) {
+  currentFilter = name;
+
+  // UI 업데이트 - 두 캐러셀 모두 동기화
+  ['#filter-carousel', '#edit-filter-carousel'].forEach(sel => {
+    $$(sel + ' .filter-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.filter === name);
+    });
+  });
+
+  if (mode === 'camera') {
+    applyLiveFilter();
   } else {
-    listView.classList.remove('hidden');
-    ganttView.classList.add('hidden');
-    renderList();
+    renderEditCanvas();
   }
-
-  const activeCount = todos.filter(t => !t.completed).length;
-  countEl.textContent = `${activeCount}개 남음`;
 }
 
-// ── Events ────────────────────────────────────────────────
-const input = document.getElementById('todo-input');
-const startInput = document.getElementById('todo-start');
-const datetimeInput = document.getElementById('todo-datetime');
+// ── 뷰티 설정 ──────────────────────────────────────────
+function setBeauty(key, value) {
+  beauty[key] = Number(value);
 
-document.getElementById('add-btn').addEventListener('click', () => {
-  addTodo(input.value, startInput.value, datetimeInput.value);
-  input.value = '';
-  startInput.value = '';
-  datetimeInput.value = '';
-  input.focus();
-});
-
-input.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    addTodo(input.value, startInput.value, datetimeInput.value);
-    input.value = '';
-    startInput.value = '';
-    datetimeInput.value = '';
-  }
-});
-
-document.getElementById('clear-datetime-btn').addEventListener('click', () => {
-  startInput.value = '';
-  datetimeInput.value = '';
-  input.focus();
-});
-
-document.getElementById('list-view').addEventListener('click', e => {
-  const item = e.target.closest('.todo-item');
-  if (!item) return;
-  const id = Number(item.dataset.id);
-  if (e.target.matches('input[type="checkbox"]')) {
-    toggleTodo(id);
-  } else if (e.target.matches('.delete-btn')) {
-    deleteTodo(id);
-  }
-});
-
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    filter = btn.dataset.filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
+  // 두 모드의 슬라이더 & 값 표시 동기화
+  const prefixes = ['', 'edit-'];
+  prefixes.forEach(prefix => {
+    const slider = $(`#${prefix}slider-${key}`);
+    const valEl = $(`#${prefix}val-${key}`);
+    if (slider) slider.value = beauty[key];
+    if (valEl) valEl.textContent = beauty[key];
   });
-});
 
-document.querySelectorAll('.view-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentView = btn.dataset.view;
-    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
+  if (mode === 'camera') {
+    applyLiveFilter();
+  } else {
+    renderEditCanvas();
+  }
+}
+
+// ── 촬영 ───────────────────────────────────────────────
+function capture() {
+  if (!stream) return;
+
+  // 플래시 애니메이션
+  const flash = document.createElement('div');
+  flash.className = 'flash-overlay';
+  document.body.appendChild(flash);
+  flash.addEventListener('animationend', () => flash.remove());
+
+  // video → canvas → Image
+  const vw = videoEl.videoWidth;
+  const vh = videoEl.videoHeight;
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = vw;
+  tempCanvas.height = vh;
+  const ctx = tempCanvas.getContext('2d');
+
+  // 전면 카메라 미러링 처리
+  if (facingMode === 'user') {
+    ctx.translate(vw, 0);
+    ctx.scale(-1, 1);
+  }
+
+  ctx.drawImage(videoEl, 0, 0, vw, vh);
+
+  const img = new Image();
+  img.onload = () => {
+    capturedImage = img;
+    enterEditMode();
+  };
+  img.src = tempCanvas.toDataURL('image/png');
+}
+
+// ── 사진 불러오기 ───────────────────────────────────────
+function handleFileImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      capturedImage = img;
+      enterEditMode();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+
+  // 같은 파일 재선택 가능하도록 초기화
+  fileInput.value = '';
+}
+
+// ── 편집 모드 진입 ──────────────────────────────────────
+function enterEditMode() {
+  mode = 'edit';
+  cameraScreen.classList.add('hidden');
+  editScreen.classList.remove('hidden');
+
+  // 편집 슬라이더를 현재 뷰티 값으로 동기화
+  ['smooth', 'bright', 'tone'].forEach(key => {
+    const slider = $(`#edit-slider-${key}`);
+    const valEl = $(`#edit-val-${key}`);
+    if (slider) slider.value = beauty[key];
+    if (valEl) valEl.textContent = beauty[key];
   });
-});
 
-document.getElementById('clear-btn').addEventListener('click', clearCompleted);
+  // 편집 필터 칩 동기화
+  $$('#edit-filter-carousel .filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.filter === currentFilter);
+  });
 
-render();
+  renderEditCanvas();
+}
+
+// ── 편집 캔버스 렌더링 ─────────────────────────────────
+function renderEditCanvas() {
+  if (!capturedImage) return;
+
+  const canvas = editCanvas;
+  const ctx = canvas.getContext('2d');
+
+  canvas.width = capturedImage.naturalWidth;
+  canvas.height = capturedImage.naturalHeight;
+
+  ctx.filter = getFilterString();
+  ctx.drawImage(capturedImage, 0, 0, canvas.width, canvas.height);
+  ctx.filter = 'none';
+}
+
+// ── 카메라 모드로 복귀 ─────────────────────────────────
+function goBackToCamera() {
+  mode = 'camera';
+  editScreen.classList.add('hidden');
+  cameraScreen.classList.remove('hidden');
+  capturedImage = null;
+
+  // 카메라 슬라이더를 현재 뷰티 값으로 동기화
+  ['smooth', 'bright', 'tone'].forEach(key => {
+    const slider = $(`#slider-${key}`);
+    const valEl = $(`#val-${key}`);
+    if (slider) slider.value = beauty[key];
+    if (valEl) valEl.textContent = beauty[key];
+  });
+
+  applyLiveFilter();
+}
+
+// ── 다운로드 ───────────────────────────────────────────
+function download() {
+  if (!capturedImage) return;
+
+  // offscreen canvas에 필터 적용 후 export
+  const offscreen = document.createElement('canvas');
+  offscreen.width = capturedImage.naturalWidth;
+  offscreen.height = capturedImage.naturalHeight;
+  const ctx = offscreen.getContext('2d');
+
+  ctx.filter = getFilterString();
+  ctx.drawImage(capturedImage, 0, 0, offscreen.width, offscreen.height);
+
+  offscreen.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `beautycam_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
